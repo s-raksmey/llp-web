@@ -1,9 +1,12 @@
 import { CourseListSection } from '@/features/courses/components/course-list-section'
+import { getCourses } from '@/features/courses/data/courses'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const courses = await getCourses()
+
   return (
     <main>
-      <CourseListSection />
+      <CourseListSection initialCourses={courses} />
     </main>
   )
 }

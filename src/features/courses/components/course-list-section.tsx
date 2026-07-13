@@ -2,19 +2,23 @@
 
 import { useMemo, useState } from 'react'
 import { CourseCard } from '@/features/courses/components/course-card'
-import { courses } from '@/features/courses/data/courses'
+import type { Course } from '@/features/courses/data/courses'
 
-export function CourseListSection() {
+type CourseListSectionProps = {
+  initialCourses: Course[]
+}
+
+export function CourseListSection({ initialCourses }: CourseListSectionProps) {
   const [search, setSearch] = useState('')
 
   const filteredCourses = useMemo(() => {
     const query = search.trim().toLowerCase()
 
     if (!query) {
-      return courses
+      return initialCourses
     }
 
-    return courses.filter((course) => {
+    return initialCourses.filter((course) => {
       const searchableText = [
         course.title,
         course.category,
@@ -26,7 +30,7 @@ export function CourseListSection() {
 
       return searchableText.includes(query)
     })
-  }, [search])
+  }, [initialCourses, search])
 
   return (
     <section className="courses-section">
@@ -48,14 +52,14 @@ export function CourseListSection() {
           </label>
 
           <p className="course-count">
-            {filteredCourses.length}/{courses.length}
+            {filteredCourses.length}/{initialCourses.length}
           </p>
         </div>
       </div>
 
       <div className="course-grid">
         {filteredCourses.map((course) => (
-          <CourseCard key={course.title} course={course} />
+          <CourseCard key={course.slug} course={course} />
         ))}
       </div>
 

@@ -4,13 +4,15 @@ import { LectureHeader } from '@/features/lectures/components/lecture-header'
 import { LectureToc } from '@/features/lectures/components/lecture-toc'
 import { notFound } from 'next/navigation'
 import {
-  courses,
   getCourseBySlug,
+  getCourses,
   getNextCourse,
 } from '@/features/courses/data/courses'
 import { getLectureContent } from '@/features/courses/utils/lecture'
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const courses = await getCourses()
+
   return courses.map((course) => ({
     slug: course.slug,
   }))
@@ -22,7 +24,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const course = getCourseBySlug(slug)
+  const course = await getCourseBySlug(slug)
 
   if (!course) {
     return {
@@ -42,13 +44,13 @@ export default async function CourseLecturePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const course = getCourseBySlug(slug)
+  const course = await getCourseBySlug(slug)
 
   if (!course) {
     notFound()
   }
 
-  const nextCourse = getNextCourse(course.slug)
+  const nextCourse = await getNextCourse(course.slug)
   const lectureContent = getLectureContent(course)
 
   return (
