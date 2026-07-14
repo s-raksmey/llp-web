@@ -12,8 +12,8 @@ export function LectureToc({ sections }: LectureTocProps) {
 
       <ol>
         {sections.map((section, index) => (
-          <li key={section.title}>
-            <a href={`#${getSectionId(section.title)}`}>
+          <li key={`${section.title}-${index}`}>
+            <a href={`#${getSectionId(section.title, index)}`}>
               {index + 1}. {section.title}
             </a>
           </li>

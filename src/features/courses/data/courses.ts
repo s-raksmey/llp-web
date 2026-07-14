@@ -17,13 +17,9 @@ export type Course = {
 }
 
 type ApiLecture = {
-  id: string
   title: string
   slug: string
   description: string | null
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
-  content: unknown | null
-  readingTime: string | null
   category: { name: string } | null
   outlineItems: Array<{
     title: string
@@ -37,24 +33,24 @@ type PublishedLecturesQuery = {
 
 export const courses: Course[] = []
 
+const publicLectureFields = `
+  title
+  slug
+  description
+  category {
+    name
+  }
+  outlineItems {
+    title
+    sortOrder
+  }
+`
+
 export async function getCourses() {
   const data = await graphqlRequest<PublishedLecturesQuery>(`
     query PublicCourses {
       lectures(status: PUBLISHED) {
-        id
-        title
-        slug
-        description
-        status
-        content
-        readingTime
-        category {
-          name
-        }
-        outlineItems {
-          title
-          sortOrder
-        }
+        ${publicLectureFields}
       }
     }
   `)
@@ -71,20 +67,7 @@ export async function getCourseBySlug(slug: string) {
     `
       query PublicCourse($slug: String!) {
         lecture(slug: $slug) {
-          id
-          title
-          slug
-          description
-          status
-          content
-          readingTime
-          category {
-            name
-          }
-          outlineItems {
-            title
-            sortOrder
-          }
+          ${publicLectureFields}
         }
       }
     `,
@@ -142,4 +125,3 @@ function accentForCategory(category: string) {
 
   return palette[total % palette.length]
 }
-
