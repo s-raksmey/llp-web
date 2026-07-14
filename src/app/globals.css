@@ -683,6 +683,17 @@ html[data-theme='dark'] .theme-icon-sun {
     color 160ms ease,
     transform 160ms ease;
 }
+.lecture-toc ol ol {
+  gap: 10px;
+  margin-top: 10px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+}
+
+.lecture-toc ol ol a {
+  font-size: 12px;
+  font-weight: 600;
+}
 
 .lecture-toc a:hover,
 .lecture-toc li:first-child a {
@@ -762,4 +773,5 @@ html[data-theme='dark'] .theme-icon-sun {
     transition-duration: 1ms !important;
   }
 }
+
 

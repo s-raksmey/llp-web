@@ -1,5 +1,5 @@
 import type { LectureSection } from '@/features/courses/data/courses'
-import { getSectionId } from '@/features/courses/utils/lecture'
+import { getChildSectionId, getSectionId } from '@/features/courses/utils/lecture'
 
 type LectureTocProps = {
   sections: LectureSection[]
@@ -16,6 +16,18 @@ export function LectureToc({ sections }: LectureTocProps) {
             <a href={`#${getSectionId(section.title, index)}`}>
               {index + 1}. {section.title}
             </a>
+
+            {section.children?.length ? (
+              <ol>
+                {section.children.map((child, childIndex) => (
+                  <li key={`${child.title}-${index}-${childIndex}`}>
+                    <a href={`#${getChildSectionId(index, child.title, childIndex)}`}>
+                      {index + 1}.{childIndex + 1} {child.title}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
           </li>
         ))}
       </ol>

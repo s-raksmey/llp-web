@@ -5,6 +5,7 @@ export type LectureSection = {
   title: string
   body: string
   content?: JSONContent | null
+  children?: LectureSection[]
 }
 
 export type Course = {
@@ -23,13 +24,18 @@ type ApiLectureContent = {
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 }
 
-type ApiLecture = {
+type ApiLectureSummary = {
   title: string
   slug: string
   description: string | null
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   category: { name: string } | null
+}
+
+type ApiLectureDetail = ApiLectureSummary & {
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   outlineItems: Array<{
+    id: string
+    parentId: string | null
     title: string
     sortOrder: number
     content: ApiLectureContent | null
@@ -37,20 +43,26 @@ type ApiLecture = {
 }
 
 type PublishedLecturesQuery = {
-  lectures: ApiLecture[]
+  lectures: ApiLectureSummary[]
 }
 
 export const courses: Course[] = []
 
-const publicLectureFields = `
+const publicLectureListFields = `
   title
   slug
   description
-  status
   category {
     name
   }
+`
+
+const publicLectureDetailFields = `
+  ${publicLectureListFields}
+  status
   outlineItems {
+    id
+    parentId
     title
     sortOrder
     content {
@@ -64,16 +76,16 @@ export async function getCourses() {
   const data = await graphqlRequest<PublishedLecturesQuery>(`
     query PublicCourses {
       lectures(status: PUBLISHED) {
-        ${publicLectureFields}
+        ${publicLectureListFields}
       }
     }
   `)
 
-  return data.lectures.map(toCourse)
+  return data.lectures.map(toCourseSummary)
 }
 
 type PublicLectureQuery = {
-  lecture: ApiLecture | null
+  lecture: ApiLectureDetail | null
 }
 
 export async function getCourseBySlug(slug: string) {
@@ -81,7 +93,7 @@ export async function getCourseBySlug(slug: string) {
     `
       query PublicCourse($slug: String!) {
         lecture(slug: $slug) {
-          ${publicLectureFields}
+          ${publicLectureDetailFields}
         }
       }
     `,
@@ -92,7 +104,7 @@ export async function getCourseBySlug(slug: string) {
     return undefined
   }
 
-  return toCourse(data.lecture)
+  return toCourseDetail(data.lecture)
 }
 
 export async function getNextCourse(slug: string) {
@@ -106,26 +118,8 @@ export async function getNextCourse(slug: string) {
   return items[currentIndex + 1] ?? items[0]
 }
 
-function toCourse(lecture: ApiLecture, index = 0): Course {
+function toCourseSummary(lecture: ApiLectureSummary, index = 0): Course {
   const category = lecture.category?.name ?? 'Lecture'
-  const publishedSections = [...lecture.outlineItems]
-    .sort((first, second) => first.sortOrder - second.sortOrder)
-    .filter((item) => item.content?.status === 'PUBLISHED')
-    .map((item) => ({
-      title: item.title,
-      body: lecture.description ?? '',
-      content: toJsonContent(item.content?.content),
-    }))
-
-  const sections = publishedSections.length
-    ? publishedSections
-    : [
-        {
-          title: lecture.title,
-          body: 'This lecture does not have published section content yet.',
-          content: null,
-        },
-      ]
 
   return {
     slug: lecture.slug,
@@ -135,8 +129,47 @@ function toCourse(lecture: ApiLecture, index = 0): Course {
     accent: accentForCategory(category),
     description: lecture.description ?? 'Published lecture from the learning platform.',
     lectureTitle: lecture.title,
-    sections,
+    sections: [],
   }
+}
+
+function toCourseDetail(lecture: ApiLectureDetail, index = 0): Course {
+  const course = toCourseSummary(lecture, index)
+  const sections = toPublishedSections(lecture)
+
+  return {
+    ...course,
+    sections: sections.length
+      ? sections
+      : [
+          {
+            title: lecture.title,
+            body: 'This lecture does not have published section content yet.',
+            content: null,
+          },
+        ],
+  }
+}
+
+function toPublishedSections(lecture: ApiLectureDetail): LectureSection[] {
+  const publishedItems = [...lecture.outlineItems]
+    .sort((first, second) => first.sortOrder - second.sortOrder)
+    .filter((item) => item.content?.status === 'PUBLISHED')
+
+  return publishedItems
+    .filter((item) => !item.parentId)
+    .map((item) => ({
+      title: item.title,
+      body: lecture.description ?? '',
+      content: toJsonContent(item.content?.content),
+      children: publishedItems
+        .filter((child) => child.parentId === item.id)
+        .map((child) => ({
+          title: child.title,
+          body: lecture.description ?? '',
+          content: toJsonContent(child.content?.content),
+        })),
+    }))
 }
 
 function toJsonContent(value: unknown): JSONContent | null {
