@@ -1,8 +1,10 @@
+import type { JSONContent } from '@tiptap/react'
 import { graphqlRequest } from '@/lib/graphql-client'
 
 export type LectureSection = {
   title: string
   body: string
+  content?: JSONContent | null
 }
 
 export type Course = {
@@ -16,14 +18,21 @@ export type Course = {
   sections: LectureSection[]
 }
 
+type ApiLectureContent = {
+  content: unknown
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+}
+
 type ApiLecture = {
   title: string
   slug: string
   description: string | null
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   category: { name: string } | null
   outlineItems: Array<{
     title: string
     sortOrder: number
+    content: ApiLectureContent | null
   }>
 }
 
@@ -37,12 +46,17 @@ const publicLectureFields = `
   title
   slug
   description
+  status
   category {
     name
   }
   outlineItems {
     title
     sortOrder
+    content {
+      content
+      status
+    }
   }
 `
 
@@ -74,7 +88,11 @@ export async function getCourseBySlug(slug: string) {
     { slug },
   )
 
-  return data.lecture ? toCourse(data.lecture) : undefined
+  if (!data.lecture || data.lecture.status !== 'PUBLISHED') {
+    return undefined
+  }
+
+  return toCourse(data.lecture)
 }
 
 export async function getNextCourse(slug: string) {
@@ -90,17 +108,22 @@ export async function getNextCourse(slug: string) {
 
 function toCourse(lecture: ApiLecture, index = 0): Course {
   const category = lecture.category?.name ?? 'Lecture'
-  const sections = lecture.outlineItems.length
-    ? [...lecture.outlineItems]
-        .sort((first, second) => first.sortOrder - second.sortOrder)
-        .map((item) => ({
-          title: item.title,
-          body: lecture.description ?? 'Lecture section content is managed in the admin dashboard.',
-        }))
+  const publishedSections = [...lecture.outlineItems]
+    .sort((first, second) => first.sortOrder - second.sortOrder)
+    .filter((item) => item.content?.status === 'PUBLISHED')
+    .map((item) => ({
+      title: item.title,
+      body: lecture.description ?? '',
+      content: toJsonContent(item.content?.content),
+    }))
+
+  const sections = publishedSections.length
+    ? publishedSections
     : [
         {
           title: lecture.title,
-          body: lecture.description ?? 'Lecture content is managed in the admin dashboard.',
+          body: 'This lecture does not have published section content yet.',
+          content: null,
         },
       ]
 
@@ -114,6 +137,19 @@ function toCourse(lecture: ApiLecture, index = 0): Course {
     lectureTitle: lecture.title,
     sections,
   }
+}
+
+function toJsonContent(value: unknown): JSONContent | null {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'type' in value &&
+    typeof (value as { type?: unknown }).type === 'string'
+  ) {
+    return value as JSONContent
+  }
+
+  return null
 }
 
 function accentForCategory(category: string) {

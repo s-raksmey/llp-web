@@ -29,15 +29,25 @@ export function getLectureContent(course: Course) {
           },
         ],
       },
-      {
-        type: 'paragraph',
-        content: [
-          {
-            type: 'text',
-            text: section.body,
-          },
-        ],
-      },
+      ...getSectionContent(section.content, section.body),
     ]),
   } satisfies JSONContent
+}
+
+function getSectionContent(content: JSONContent | null | undefined, fallback: string) {
+  if (Array.isArray(content?.content) && content.content.length > 0) {
+    return content.content
+  }
+
+  return [
+    {
+      type: 'paragraph',
+      content: [
+        {
+          type: 'text',
+          text: fallback,
+        },
+      ],
+    },
+  ]
 }
